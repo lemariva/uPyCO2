@@ -109,8 +109,9 @@ if app_config['gcp']:
 
 def main():
 
-    restapi = RestApi()
-    restapi.run()
+    if app_config['restapi']:
+        restapi = RestApi()
+        restapi.run()
 
     # Retrieve previously stored baselines, if any (helps the compensation algorithm).
     has_baseline = False
@@ -145,9 +146,10 @@ def main():
         tvoc, eco2 = sgp30.indoor_air_quality
         timestamp = utime.time() + epoch_offset
 
-        restapi.tvoc = tvoc
-        restapi.eco2 = eco2
-        restapi.timestamp = timestamp
+        if app_config['restapi']:
+            restapi.tvoc = tvoc
+            restapi.eco2 = eco2
+            restapi.timestamp = timestamp
 
         if app_config['gcp']:
             #sending data to gcp
@@ -204,8 +206,10 @@ def main():
         gc.collect()
         
         print("Going to sleep for about %s milliseconds!" % app_config["deepsleepms"])
-        deepsleep(app_config["deepsleepms"])
-        #utime.sleep(5000)
+        if app_config['restapi']:
+            utime.sleep(app_config["deepsleepms"])
+        else:
+            deepsleep(app_config["deepsleepms"])
 
 if __name__ == '__main__':
     try:
@@ -213,6 +217,6 @@ if __name__ == '__main__':
     except KeyboardInterrupt:
         raise
     except OSError as exc:
-        print(e)
+        print(exc)
         utime.sleep(5)
         reset()
