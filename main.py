@@ -14,9 +14,9 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 import gc
-from machine import Pin, SoftI2C, reset, I2S
+from machine import Pin, SoftI2C, reset, I2S, deepsleep
 import network
-import neopixel
+from neopixel import NeoPixel
 
 import ujson
 import utime
@@ -40,7 +40,7 @@ sgp30 = SGP30(i2c)
 sgp30.initialise_indoor_air_quality()
 
 ## neopixel
-np = neopixel.NeoPixel(Pin(device_config['led']), 1)
+np = NeoPixel(Pin(device_config['led']), 1)
 
 if app_config['audio']:
     ## audio setup
@@ -73,38 +73,39 @@ if app_config['audio']:
         print("done")
         gc.collect()
 
-## google iot core functions
-def on_message(topic, message):
-    print((topic,message))
+if app_config['gcp']:
+    ## google iot core functions
+    def on_message(topic, message):
+        print((topic,message))
 
-def b42_urlsafe_encode(payload):
-    return string.translate(b2a_base64(payload)[:-1].decode('utf-8'),{ ord('+'):'-', ord('/'):'_' })
+    def b42_urlsafe_encode(payload):
+        return string.translate(b2a_base64(payload)[:-1].decode('utf-8'),{ ord('+'):'-', ord('/'):'_' })
 
-def create_jwt(project_id, private_key, algorithm, token_ttl):
-    print("Creating JWT...")
-    private_key = rsa.PrivateKey(*private_key)
-    claims = {
-            'iat': utime.time() + epoch_offset,
-            'exp': utime.time() + epoch_offset + token_ttl,
-            'aud': project_id
-    }
-    header = { "alg": algorithm, "typ": "JWT" }
-    content = b42_urlsafe_encode(ujson.dumps(header).encode('utf-8'))
-    content = content + '.' + b42_urlsafe_encode(ujson.dumps(claims).encode('utf-8'))
-    signature = b42_urlsafe_encode(rsa.sign(content,private_key,'SHA-256'))
-    return content+ '.' + signature 
+    def create_jwt(project_id, private_key, algorithm, token_ttl):
+        print("Creating JWT...")
+        private_key = rsa.PrivateKey(*private_key)
+        claims = {
+                'iat': utime.time() + epoch_offset,
+                'exp': utime.time() + epoch_offset + token_ttl,
+                'aud': project_id
+        }
+        header = { "alg": algorithm, "typ": "JWT" }
+        content = b42_urlsafe_encode(ujson.dumps(header).encode('utf-8'))
+        content = content + '.' + b42_urlsafe_encode(ujson.dumps(claims).encode('utf-8'))
+        signature = b42_urlsafe_encode(rsa.sign(content,private_key,'SHA-256'))
+        return content+ '.' + signature 
 
-def get_mqtt_client(project_id, cloud_region, registry_id, device_id, jwt):
-    """Create our MQTT client. The client_id is a unique string that identifies
-    this device. For Google Cloud IoT Core, it must be in the format below."""
-    client_id = 'projects/{}/locations/{}/registries/{}/devices/{}'.format(project_id, cloud_region, registry_id, device_id)
-    print('Sending message with password {}'.format(jwt))
-    client = MQTTClient(client_id.encode('utf-8'),server=google_cloud_config['mqtt_bridge_hostname'],port=google_cloud_config['mqtt_bridge_port'],user=b'ignored',password=jwt.encode('utf-8'),ssl=True)
-    client.set_callback(on_message)
-    client.connect()
-    client.subscribe('/devices/{}/config'.format(device_id), 1)
-    client.subscribe('/devices/{}/commands/#'.format(device_id), 1)
-    return client
+    def get_mqtt_client(project_id, cloud_region, registry_id, device_id, jwt):
+        """Create our MQTT client. The client_id is a unique string that identifies
+        this device. For Google Cloud IoT Core, it must be in the format below."""
+        client_id = 'projects/{}/locations/{}/registries/{}/devices/{}'.format(project_id, cloud_region, registry_id, device_id)
+        print('Sending message with password {}'.format(jwt))
+        client = MQTTClient(client_id.encode('utf-8'),server=google_cloud_config['mqtt_bridge_hostname'],port=google_cloud_config['mqtt_bridge_port'],user=b'ignored',password=jwt.encode('utf-8'),ssl=True)
+        client.set_callback(on_message)
+        client.connect()
+        client.subscribe('/devices/{}/config'.format(device_id), 1)
+        client.subscribe('/devices/{}/commands/#'.format(device_id), 1)
+        return client
 
 def main():
 
@@ -132,32 +133,34 @@ def main():
     #Store the time at which last baseline has been saved
     baseline_time = utime.time()
 
-    # cloud connection
-    jwt = create_jwt(google_cloud_config['project_id'], jwt_config['private_key'], jwt_config['algorithm'], jwt_config['token_ttl'])
-    client = get_mqtt_client(google_cloud_config['project_id'], google_cloud_config['cloud_region'], google_cloud_config['registry_id'], config.google_cloud_config['device_id'], jwt)
-    gc.collect()
+    if app_config['gcp']:
+        # cloud connection
+        jwt = create_jwt(google_cloud_config['project_id'], jwt_config['private_key'], jwt_config['algorithm'], jwt_config['token_ttl'])
+        client = get_mqtt_client(google_cloud_config['project_id'], google_cloud_config['cloud_region'], google_cloud_config['registry_id'], config.google_cloud_config['device_id'], jwt)
+        gc.collect()
     
     # acquiring and sending data
     while True:
         # acquiring data
         tvoc, eco2 = sgp30.indoor_air_quality
         timestamp = utime.time() + epoch_offset
-        
-        message = {
-            "device_id": google_cloud_config['device_id'],
-            "tvoc": tvoc,
-            "eco2": eco2,
-            "timestamp": timestamp
-        }
+
         restapi.tvoc = tvoc
         restapi.eco2 = eco2
         restapi.timestamp = timestamp
 
-        #sending data
-        print("Publishing message "+str(ujson.dumps(message)))
-        mqtt_topic = '/devices/{}/{}'.format(google_cloud_config['device_id'], 'events')
-        client.publish(mqtt_topic.encode('utf-8'), ujson.dumps(message).encode('utf-8'))
-        client.check_msg() # Check for new messages on subscription
+        if app_config['gcp']:
+            #sending data to gcp
+            message = {
+                "device_id": google_cloud_config['device_id'],
+                "tvoc": tvoc,
+                "eco2": eco2,
+                "timestamp": timestamp
+            }
+            print("Publishing message "+str(ujson.dumps(message)))
+            mqtt_topic = '/devices/{}/{}'.format(google_cloud_config['device_id'], 'events')
+            client.publish(mqtt_topic.encode('utf-8'), ujson.dumps(message).encode('utf-8'))
+            client.check_msg()
 
         if tvoc > app_config['warning']:
             np[0] = (255, 255, 0)
@@ -201,13 +204,15 @@ def main():
         gc.collect()
         
         print("Going to sleep for about %s milliseconds!" % app_config["deepsleepms"])
-        #machine.deepsleep(app_config["deepsleepms"])
-        utime.sleep(5000)
+        deepsleep(app_config["deepsleepms"])
+        #utime.sleep(5000)
 
 if __name__ == '__main__':
     try:
         main()
     except KeyboardInterrupt:
         raise
-    except:
+    except OSError as exc:
+        print(e)
+        utime.sleep(5)
         reset()
