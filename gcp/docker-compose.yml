@@ -1,14 +1,8 @@
 version: '3.7'
 services:
 
-  owm-service:
-    image: gcr.io/core-iot-sensors/owm-service
-    restart: unless-stopped
-    env_file:
-    - .env
-
-  upybeam-esp32:
-    image: gcr.io/core-iot-sensors/upybeam-esp32
+  upyco2-service:
+    image: gcr.io/core-iot-sensors/upyco2-esp32:1.0.0
     restart: unless-stopped
     env_file:
     - .env
