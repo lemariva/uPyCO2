@@ -13,8 +13,8 @@ LABEL org.label-schema.name="uPyCO2 RestAPI Service" \
     org.label-schema.version="${MAYOR_REVISION}.${MINOR_REVISION}.${BUILD_ID}"
 
 WORKDIR /home
-COPY resources/requirements/requirements.txt /tmp/requirements.txt
-COPY resources/credentials/service_account.json /home/service_account.json
+COPY resources/requirements.txt /tmp/requirements.txt
+COPY resources/service_account.json /home/service_account.json
 
 RUN apt-get update \
     && apt-get install -y python-pip \
