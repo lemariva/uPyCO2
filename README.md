@@ -1,0 +1,4 @@
+## uPyCO2
+This repository has the code that helps you to build DIY CO2 measuring devices and connect them to your smartphone. The measurements can be an aid for Covid-19 prevention. Because if there is a lot of exhaled CO2 in the air, there are also a lot of aerosols in the air. These smallest particles to which Sars-CoV-2 viruses from the respiratory tract attach themselves can float in the room air and can spread over several meters. A high concentration of aerosols increases the risk for everyone else in the room to become infected.
+
+More Info: [M5Stack: Fresh air checker helps you to stay safe from #COVID-19](https://lemariva.com/blog/default/default/m5stack-fresh-air-helps-stay-safe-from-covid-19)

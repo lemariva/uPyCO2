@@ -22,8 +22,10 @@ RUN apt-get update \
     && rm -rf /var/lib/apt/lists/*
 
 COPY app /home/app
-COPY resources/run-restapi.sh /etc/init.d/run-restapi.sh
+COPY resources/restapi-service.sh /etc/init.d/restapi-service.sh
 
-ENTRYPOINT [ "/etc/init.d/run-restapi.sh" ]
+CMD [ "sh", "/etc/init.d/restapi-service.sh" ]
+
+EXPOSE 8080
 
 STOPSIGNAL SIGTERM
