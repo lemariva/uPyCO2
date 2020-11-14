@@ -107,6 +107,7 @@ if app_config['gcp']:
         client.subscribe('/devices/{}/commands/#'.format(device_id), 1)
         return client
 
+
 def main():
 
     if app_config['restapi']:
@@ -140,43 +141,51 @@ def main():
         client = get_mqtt_client(google_cloud_config['project_id'], google_cloud_config['cloud_region'], google_cloud_config['registry_id'], config.google_cloud_config['device_id'], jwt)
         gc.collect()
     
+    ts_send_gcp = 0
+    ts_send_restapi = 0
     # acquiring and sending data
     while True:
         # acquiring data
         tvoc, eco2 = sgp30.indoor_air_quality
         timestamp = utime.time() + epoch_offset
 
-        if app_config['restapi']:
-            restapi.tvoc = tvoc
-            restapi.eco2 = eco2
-            restapi.timestamp = timestamp
-
-        if app_config['gcp']:
-            #sending data to gcp
-            message = {
-                "device_id": google_cloud_config['device_id'],
-                "tvoc": tvoc,
-                "eco2": eco2,
-                "timestamp": timestamp
-            }
-            print("Publishing message "+str(ujson.dumps(message)))
-            mqtt_topic = '/devices/{}/{}'.format(google_cloud_config['device_id'], 'events')
-            client.publish(mqtt_topic.encode('utf-8'), ujson.dumps(message).encode('utf-8'))
-            client.check_msg()
-
-        if tvoc > app_config['warning']:
-            np[0] = (255, 255, 0)
+        if tvoc > app_config['danger']:
+            np[0] = (255, 0, 0)
             np.write()
             if app_config['audio']:
                 warning_sound()
-        elif tvoc > app_config['danger']:
-            np[0] = (255, 0, 0)
+        elif tvoc > app_config['warning']:
+            np[0] = (255, 255, 0)
             np.write()
             if app_config['audio']:
                 warning_sound()
         else:
             np[0] = (0, 255, 0)
             np.write()
+
+        #sending data to restapi
+        if app_config['restapi']:
+            if utime.time() - ts_send_restapi > app_config['ts_restapi']: 
+                restapi.tvoc = tvoc
+                restapi.eco2 = eco2
+                restapi.timestamp = timestamp
+                ts_send_restapi = utime.time()
+
+        #sending data to gcp
+        if app_config['gcp']:
+            if utime.time() - ts_send_gcp > app_config['ts_gcp']: 
+                message = {
+                    "device_id": google_cloud_config['device_id'],
+                    "tvoc": tvoc,
+                    "eco2": eco2,
+                    "timestamp": timestamp
+                }
+                print("Publishing message "+str(ujson.dumps(message)))
+                mqtt_topic = '/devices/{}/{}'.format(google_cloud_config['device_id'], 'events')
+                client.publish(mqtt_topic.encode('utf-8'), ujson.dumps(message).encode('utf-8'))
+                gc.collect()
+                client.check_msg()
+                ts_send_gcp = utime.time() 
 
         gc.collect()
 
@@ -207,10 +216,10 @@ def main():
         
         print("Going to sleep for about %s milliseconds!" % app_config["deepsleepms"])
         if app_config['restapi']:
-            utime.sleep(app_config["deepsleepms"])
+            utime.sleep_ms(app_config["deepsleepms"])
         else:
             deepsleep(app_config["deepsleepms"])
-
+        
 if __name__ == '__main__':
     try:
         main()
