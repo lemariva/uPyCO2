@@ -1,0 +1,85 @@
+<!doctype html>
+<html>
+	<head>
+    	<meta charset="utf-8">
+		<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+		<meta name="viewport" content="width=device-width, initial-scale=1">
+		<link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico') }}">
+		<title>Sensor Gauge</title>
+		<script src="https://code.jquery.com/jquery-1.11.1.min.js"></script>
+		<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/raphael/2.1.2/raphael-min.js"></script>
+		<script type="text/javascript" src="{{url_for('static', filename='js/kuma-gauge.jquery.js')}}"></script>
+		<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-alpha3/dist/css/bootstrap.min.css" rel="stylesheet">
+	</head>
+	<body>
+		<div class="container-fluid">
+			<div id="deviceid" style="text-align: center;">DEVICE_NAME</div>
+			<div class="row justify-content-md-center">
+				<div class="card" style="width: 18rem;">
+					<div class="card-body">
+					<h5 class="card-title">TVOC</h5>
+					<div class="js-gauge gauge tvoc"></div>
+					</div>
+				</div>
+			</div>
+			<div class="row justify-content-md-center"><br/></div>
+			<div class="row justify-content-md-center">
+				<div class="card" style="width: 18rem;">
+					<div class="card-body">
+					<h5 class="card-title">ECO2</h5>
+					<div class="js-gauge gauge eco2"></div>
+					</div>
+				</div>
+			</div>
+			<div id="timestamp" style="text-align: center;">0</div>
+		</div>	
+		<script type="text/javascript">
+			var getUrlParameter = function getUrlParameter(sParam) {
+				var sPageURL = window.location.search.substring(1),
+					sURLVariables = sPageURL.split('&'),
+					sParameterName,
+					i;
+
+				for (i = 0; i < sURLVariables.length; i++) {
+					sParameterName = sURLVariables[i].split('=');
+
+					if (sParameterName[0] === sParam) {
+						return sParameterName[1] === undefined ? true : decodeURIComponent(sParameterName[1]);
+					}
+				}
+			};
+			var deviceId = getUrlParameter('deviceId');
+
+			$('.tvoc').kumaGauge({
+				value :0,
+				min: 350,
+				max: 1000,
+			});
+			$('.eco2').kumaGauge({
+				value : 0,
+				min: 0,
+				max: 600,
+			});
+			//console.log(deviceId);
+			function getData() {
+				var dynamicUrl = '/dev?deviceId='+deviceId;
+				var tdate = new Date(1970, 0, 1);
+
+				$.getJSON(dynamicUrl, function(data) {
+					//console.log(data);
+					if (data['found']) {
+						document.getElementById("timestamp").innerHTML = data['timestamp'];
+						document.getElementById("deviceid").innerHTML = data['device_id'];
+						$('.tvoc').kumaGauge('update',{
+							value : data['tvoc'],
+						});
+						$('.eco2').kumaGauge('update',{
+							value : data['eco2'],
+						});
+					}
+				});
+			}
+			setInterval(getData, 5000);
+		</script>
+	</body>
+</html>

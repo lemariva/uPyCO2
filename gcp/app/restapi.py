@@ -10,7 +10,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
-
+import os
 import argparse
 import requests
 import logging
@@ -22,8 +22,6 @@ from datetime import datetime
 import time
 from flask import Flask, render_template, Response, request, jsonify, url_for
 
-LOOP_TIME_SLEEP = 60 * 10
-
 subscriber = pubsub_v1.SubscriberClient()
 
 app = Flask(__name__)
@@ -31,8 +29,13 @@ app.config["DEBUG"] = True
 
 devices = {}
 
-@app.route('/', methods=['GET'])
+@app.route("/")
+def index():
+    return render_template("index.html")
+
+@app.route('/dev', methods=['GET'])
 def home():
+
     device_id = request.args.get("deviceId")
     tvoc = 0
     eco2 = 0
@@ -40,10 +43,11 @@ def home():
 
     if device_id in devices:
         device = devices[device_id]
-        data = {  
+        data = {
             "device_id": device_id,
             "tvoc": device['tvoc'],
-            "eco2,": device['eco2'],
+            "eco2": device['eco2'],
+            "epoch": device['timestamp'],
             "timestamp": datetime.fromtimestamp(device['timestamp']),
             "found": True
         }
@@ -53,6 +57,7 @@ def home():
         }
 
     return jsonify(data), 200
+
 
 def callback(message):
     device_id = message.attributes['deviceId']
@@ -75,7 +80,7 @@ if __name__ == "__main__":
     assert sys.version_info >= (3, 6), sys.version_info
 
     parser = argparse.ArgumentParser()
-    parser.add_argument("--port", type=int, default=8000, help="server port for information")
+    parser.add_argument("--port", type=int, default=8080, help="server port for information")
     parser.add_argument("--project", default="core-iot-sensors", help="google project id")
     parser.add_argument("--subscription", default="esp32-iot-tvoc", help="subscription name")
 
