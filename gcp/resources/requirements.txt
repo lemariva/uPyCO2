@@ -2,3 +2,4 @@ wheel
 google-cloud-pubsub
 Flask
 waitress
+pyopenssl
