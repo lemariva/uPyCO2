@@ -26,12 +26,14 @@ class RestApi():
         self.eco2 = 0
 
         self.routeHandlers = [
+            ("/json", "GET", self._httpHandlerJson),
             ("/", "GET", self._httpHandlerIndex),
+            ("/js/kuma-gauge.jquery.js", "GET", self._httpHandlerJs),
             ("/memory/<query>", "GET", self._httpHandlerMemory)
         ]
 
     def run(self):
-        mws = MicroWebSrv(routeHandlers=self.routeHandlers, webPath="www/")
+        mws = MicroWebSrv(routeHandlers=self.routeHandlers, webPath="/flash/www")
         mws.Start(threaded=True)
         gc.collect()
 
@@ -47,6 +49,28 @@ class RestApi():
         return newdata
 
     def _httpHandlerIndex(self, httpClient, httpResponse):
+        f = open('www/index.html')
+        content = f.read()
+
+        gc.collect()
+        httpResponse.WriteResponseOk(headers=None,
+                                 contentType="text/html",
+                                 contentCharset="UTF-8",
+                                 content=content)
+        gc.collect()
+
+    def _httpHandlerJs(self, httpClient, httpResponse):
+        f = open('www/js/kuma-gauge.jquery.js')
+        content = f.read()
+        
+        gc.collect()
+        httpResponse.WriteResponseOk(headers=None,
+                                 contentType="text/javascript",
+                                 contentCharset="UTF-8",
+                                 content=content)
+        gc.collect()
+
+    def _httpHandlerJson(self, httpClient, httpResponse):
         data = {
             'timestamp': self.timestamp,
             'tvoc': self.tvoc,
@@ -58,6 +82,7 @@ class RestApi():
                                         contentCharset="UTF-8",
                                         content=json.dumps(data))
         gc.collect()
+
 
 
     def _httpHandlerMemory(self, httpClient, httpResponse, routeArgs):
