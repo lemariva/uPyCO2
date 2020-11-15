@@ -7,5 +7,13 @@ You can find more information on how to use the files in the following tutorials
 * [M5Stack: Widgets on your Smartphone help to stay safe from #COVID-19](https://lemariva.com/blog/default/default/m5stack-widgets-your-smartphone-help-stay-safe-covid-19)
 * [iOS Scriptable Widget](https://gist.github.com/lemariva/4d52b8cb43ff4571a38b883bf452bea6)
 
+
+## Android & iOS Widgets
+|           | 
+|:---------:|
+|![CO2 reporting widgets on Android and iOS](https://lemariva.com/storage/temp/public/32f/ef2/372/5fb15db49fc01606189780__619.jpg)|
+|Fig. 1: CO2 reporting widgets on Android and iOS|
+
+
 ## License
 Apache 2.0
