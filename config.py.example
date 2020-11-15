@@ -26,9 +26,13 @@ device_config = {
 
 app_config = {
     'audio': False,
-    'deepsleepms': 600000,
+    'gcp': True,
+    'restapi': True,
     'warning': 600,
-    'danger': 1000
+    'danger': 1000,
+    'deepsleepms': 1000,
+    'ts_gcp': 300,
+    'ts_restapi': 5,
 }
 
 wifi_config = {
